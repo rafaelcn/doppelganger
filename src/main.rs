@@ -1,51 +1,9 @@
-use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
-use std::hash::Hasher;
-use std::io::Read;
 use std::{env, fs};
 
-struct File {
-    hash: u64,
-    path: String,
-    duplicates: Vec<String>,
-    duplicates_number: u32,
-}
+mod doppelganger;
 
-impl File {
-    fn new(path: String) -> File {
-        File {
-            hash: 0,
-            path,
-            duplicates: Vec::new(),
-            duplicates_number: 0,
-        }
-    }
-
-    fn hash(&mut self) -> Result<u64, String> {
-        if self.path.is_empty() {
-            return Err(String::from("file path is empty"));
-        }
-        if self.hash > 0 {
-            return Ok(self.hash);
-        }
-
-        let mut file = fs::File::open(self.path.clone()).expect("failed to open file");
-        let mut buffer: Vec<u8> = Vec::new();
-
-        let mut hasher = DefaultHasher::new();
-
-        println!("calculating hash for file {}", self.path);
-
-        match file.read_to_end(&mut buffer) {
-            Ok(_n) => buffer.iter().for_each(|b| hasher.write_u8(*b)),
-            Err(err) => eprintln!("failed to read file, reason {}", err),
-        }
-
-        self.hash = hasher.finish();
-
-        Ok(self.hash)
-    }
-}
+use crate::doppelganger::file::File;
 
 fn main() -> Result<(), String> {
     let args: Vec<_> = env::args().collect();
@@ -96,7 +54,7 @@ fn main() -> Result<(), String> {
                 .filter(|(k, v)| v.duplicates_number >= 1)
                 .for_each(|(k, v)| {
                     println!(
-                        "{} file is duplicated {} time(s)",
+                        "[{}] file is duplicated {} time(s)",
                         v.hash, v.duplicates_number
                     );
                     v.duplicates.iter().for_each(|name| println!("\t{}", name));
