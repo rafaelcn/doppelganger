@@ -1,5 +1,5 @@
 # Doppelganger
-==============
+==
 
 
 Doppelganger is a duplicate file finder. Giving it a directory initiates a scan 
