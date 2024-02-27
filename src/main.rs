@@ -73,15 +73,19 @@ fn main() -> Result<(), String> {
 
             let map = mutex.lock().unwrap();
 
-            map.iter()
-                .filter(|(_k, v)| v.duplicates_number >= 1)
-                .for_each(|(_k, v)| {
-                    println!(
-                        "[{}] file is duplicated {} time(s)",
-                        v.hash, v.duplicates_number
-                    );
-                    v.duplicates.iter().for_each(|name| println!("\t{}", name));
-                });
+            if map.is_empty() {
+                println!("no duplicates found")
+            } else {
+                map.iter()
+                    .filter(|(_k, v)| v.duplicates_number >= 1)
+                    .for_each(|(_k, v)| {
+                        println!(
+                            "[{}] file is duplicated {} time(s)",
+                            v.hash, v.duplicates_number
+                        );
+                        v.duplicates.iter().for_each(|name| println!("\t{}", name));
+                    });
+            }
         }
         None => eprintln!("not a valid directory (?)"),
     }
