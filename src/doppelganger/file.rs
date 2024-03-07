@@ -35,7 +35,7 @@ impl File {
         println!("calculating hash for file {}", self.path);
 
         match file.read_to_end(&mut buffer) {
-            Ok(size) => buffer.iter().for_each(|b| hasher.write_u8(*b)),
+            Ok(_) => buffer.iter().for_each(|b| hasher.write_u8(*b)),
             Err(err) => eprintln!("failed to read file, reason {}", err),
         }
 
