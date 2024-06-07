@@ -2,6 +2,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::Hasher;
 use std::{fs, io::Read};
 
+#[derive(Debug)]
 pub struct File {
     pub hash: u64,
     path: String,

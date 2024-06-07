@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 use std::{env, fs};
 
+use rayon::prelude::*;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::thread;
 
 mod doppelganger;
 
@@ -21,59 +21,55 @@ fn main() -> Result<(), String> {
 
     match arg {
         Some(directory) => {
-            let doppelganger: HashMap<u64, File> = HashMap::new();
-
-            let mut handles = vec![];
-            let mutex = Arc::new(Mutex::new(doppelganger));
-
             let files = fs::read_dir(directory).expect("failed to read directory");
 
-            for entry in files {
-                let resource = mutex.clone();
+            let doppelganger: HashMap<u64, File> = HashMap::new();
+            let mutex = Arc::new(Mutex::new(doppelganger));
 
-                let handle = thread::spawn(move || {
-                    let dir_entry = entry.expect("failed to capture a directory entry");
+            let files_list: Vec<_> = files.into_iter().collect();
 
-                    let file_name = dir_entry.file_name().to_str().unwrap().to_string();
-                    let file_path = dir_entry.path();
-                    let file_type = dir_entry.file_type().expect("failed to get the file type");
+            files_list.into_par_iter().for_each(|file_entry| {
+                let mutex = mutex.clone();
 
-                    if let Some(v) = file_path.to_str() {
-                        if file_type.is_file() {
-                            let mut file = File::new(v.to_string());
+                let dir_entry = file_entry.expect("failed to capture a directory entry");
 
-                            file.hash().expect("failed to calculate file hash");
+                let file_name = dir_entry.file_name().to_str().unwrap().to_string();
+                let file_path = dir_entry.path();
+                let file_type = dir_entry.file_type().expect("failed to get the file type");
 
-                            let mut map = resource
-                                .lock()
-                                .expect("couldn't get a hold in the doppelganger map");
+                if let Some(v) = file_path.to_str() {
+                    if file_type.is_file() {
+                        let mut file = File::new(v.to_string());
 
-                            if map.contains_key(&file.hash) {
-                                let duplicated = map.get(&file.hash).unwrap();
+                        file.hash().expect("failed to calculate file hash");
 
-                                file.duplicates.push(file_name);
-                                file.duplicates.append(&mut duplicated.duplicates.clone());
+                        let mut map = mutex
+                            .lock()
+                            .expect("couldn't get a hold in the doppelganger map");
 
-                                file.duplicates_number += duplicated.duplicates_number + 1;
-                            } else {
-                                file.duplicates.push(file_name);
-                            }
+                        if map.contains_key(&file.hash) {
+                            let duplicated = map.get(&file.hash).unwrap();
 
-                            map.insert(file.hash, file);
+                            file.duplicates.push(file_name);
+                            file.duplicates.append(&mut duplicated.duplicates.clone());
+
+                            file.duplicates_number += duplicated.duplicates_number + 1;
+                        } else {
+                            file.duplicates.push(file_name);
                         }
+
+                        map.insert(file.hash, file);
                     }
-                });
-
-                handles.push(handle);
-            }
-
-            for handle in handles {
-                handle.join().unwrap();
-            }
+                }
+            });
 
             let map = mutex.lock().unwrap();
 
-            if map.is_empty() {
+            let duplicates = map
+                .iter()
+                .fold(0u64, |acc, file| acc + file.1.duplicates_number);
+
+            if duplicates == 0 {
                 println!("no duplicates found")
             } else {
                 map.iter()
